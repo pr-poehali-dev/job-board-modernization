@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +24,16 @@ interface Job {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('vacancies');
+  const [filters, setFilters] = useState({
+    location: '',
+    level: '',
+    type: '',
+    salaryMin: ''
+  });
+  const [showFilters, setShowFilters] = useState(false);
   
   const featuredJobs: Job[] = [
     {
@@ -96,11 +105,18 @@ const Index = () => {
     }
   ];
 
-  const filteredJobs = allJobs.filter(job => 
-    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredJobs = allJobs.filter(job => {
+    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLocation = !filters.location || job.location.toLowerCase().includes(filters.location.toLowerCase());
+    const matchesLevel = !filters.level || job.level === filters.level;
+    const matchesType = !filters.type || job.type === filters.type;
+    const matchesSalary = !filters.salaryMin || parseInt(job.salary.split(' ')[0].replace(/\s/g, '')) >= parseInt(filters.salaryMin);
+    
+    return matchesSearch && matchesLocation && matchesLevel && matchesType && matchesSalary;
+  });
 
   const [resumeData, setResumeData] = useState({
     fullName: '',
@@ -188,19 +204,105 @@ const Index = () => {
             <p className="text-xl text-muted-foreground">
               Тысячи вакансий от ведущих компаний. Создайте резюме за 5 минут.
             </p>
-            <div className="flex gap-2 max-w-2xl mx-auto">
-              <div className="relative flex-1">
-                <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-                <Input
-                  placeholder="Должность, компания или ключевое слово"
-                  className="pl-10 h-12"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+            <div className="space-y-3">
+              <div className="flex gap-2 max-w-2xl mx-auto">
+                <div className="relative flex-1">
+                  <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                  <Input
+                    placeholder="Должность, компания или ключевое слово"
+                    className="pl-10 h-12"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="h-12"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Icon name="SlidersHorizontal" size={20} />
+                </Button>
+                <Button size="lg" className="h-12 px-8">
+                  Найти
+                </Button>
               </div>
-              <Button size="lg" className="h-12 px-8">
-                Найти
-              </Button>
+              
+              {showFilters && (
+                <Card className="max-w-2xl mx-auto animate-in slide-in-from-top">
+                  <CardContent className="pt-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Город</Label>
+                        <Select value={filters.location} onValueChange={(val) => setFilters({...filters, location: val})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все города" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Все города</SelectItem>
+                            <SelectItem value="Москва">Москва</SelectItem>
+                            <SelectItem value="Санкт-Петербург">Санкт-Петербург</SelectItem>
+                            <SelectItem value="Удаленно">Удаленно</SelectItem>
+                            <SelectItem value="Казань">Казань</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Уровень</Label>
+                        <Select value={filters.level} onValueChange={(val) => setFilters({...filters, level: val})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все уровни" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Все уровни</SelectItem>
+                            <SelectItem value="Junior">Junior</SelectItem>
+                            <SelectItem value="Middle">Middle</SelectItem>
+                            <SelectItem value="Senior">Senior</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Тип занятости</Label>
+                        <Select value={filters.type} onValueChange={(val) => setFilters({...filters, type: val})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все типы" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Все типы</SelectItem>
+                            <SelectItem value="Полная занятость">Полная занятость</SelectItem>
+                            <SelectItem value="Удаленная работа">Удаленная работа</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Зарплата от (₽)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Минимальная зарплата"
+                          value={filters.salaryMin}
+                          onChange={(e) => setFilters({...filters, salaryMin: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setFilters({ location: '', level: '', type: '', salaryMin: '' })}
+                      >
+                        Сбросить
+                      </Button>
+                      <Button className="flex-1" onClick={() => setShowFilters(false)}>
+                        Применить
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
             <div className="flex flex-wrap justify-center gap-2 pt-4">
               <Badge variant="secondary" className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
@@ -274,7 +376,7 @@ const Index = () => {
                       </p>
                     </CardContent>
                     <CardFooter>
-                      <Button className="w-full">
+                      <Button className="w-full" onClick={() => navigate(`/job/${job.id}`)}>
                         Откликнуться
                       </Button>
                     </CardFooter>
@@ -318,7 +420,7 @@ const Index = () => {
                       </p>
                     </CardContent>
                     <CardFooter className="pt-3">
-                      <Button variant="outline" className="w-full" size="sm">
+                      <Button variant="outline" className="w-full" size="sm" onClick={() => navigate(`/job/${job.id}`)}>
                         Подробнее
                       </Button>
                     </CardFooter>
@@ -503,7 +605,7 @@ const Index = () => {
               </Card>
             </div>
             <div className="text-center mt-8">
-              <Button size="lg">
+              <Button size="lg" onClick={() => navigate('/post-job')}>
                 <Icon name="Plus" size={16} className="mr-2" />
                 Разместить вакансию
               </Button>
